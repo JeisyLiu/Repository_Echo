@@ -1,4 +1,5 @@
 import * as THREE from '../externsrc/build/three.module.js';
+
 import { OrbitControls } from '../externsrc/jsm/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../externsrc/jsm/renderers/CSS2DRenderer.js';
 
@@ -6,10 +7,13 @@ var camera, scene, renderer, labelRenderer;
 
 var clock = new THREE.Clock();
 var textureLoader = new THREE.TextureLoader();
+var stargeometry;
+var particleSystem;
+var particles = 100000;
 
 var sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto;
+var saturnring;
 
-var tmpmoon;
 // Universal Data
 // radius ( unit is mile )
 var TRUE_SUN_RADIUS = 432376;
@@ -55,22 +59,19 @@ var URANUS_PERIHELION = 182;
 var NEPTUNE_PERIHELION = 298;
 var PLUTO_PERIHELION = 340;
 
-init();
+initplanets();
 animate();
 // 1 AU == 929560000 miles
 
-function normalizeDistance(x){ // unit is Astronomical unit, transfer it to mile/ earth
+function normalizeDistance(x) { // unit is Astronomical unit, transfer it to mile/ earth
     return x * 92956 / 100000;
 }
 
-function normalizeRadius(x){ // unit is mile transfer it to / earth
-    return x / (TRUE_EARTH_RADIUS * 10) ;
+function normalizeRadius(x) { // unit is mile transfer it to / earth
+    return x / (TRUE_EARTH_RADIUS * 10);
 }
 
-function init() {
-
-    var EARTH_RADIUS = 1;
-    var MOON_RADIUS = 0.27;
+function initplanets() {
 
     camera = new THREE.PerspectiveCamera(15, window.innerWidth / window.innerHeight, 1, 1000);
     camera.position.set(10, 5, 20);
@@ -81,16 +82,17 @@ function init() {
     sunlight.position.set(0, 0, 0);
     scene.add(sunlight);
 
-    var axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
+    // var axesHelper = new THREE.AxesHelper(5);
+    // scene.add(axesHelper);
 
-    // geometry and material
+    // stargeometry and material
     // sun
-    var sunGeometry = new THREE.SphereBufferGeometry(normalizeRadius(TRUE_SUN_RADIUS) / 10, 32, 32);
+    var sunGeometry = new THREE.SphereBufferGeometry(normalizeRadius(TRUE_SUN_RADIUS) / 5, 32, 32);
     var sunMaterial = new THREE.MeshPhongMaterial({
         specular: 0x333333,
         shininess: 5,
         map: textureLoader.load('../texture/planets/sun_1277.png'),
+        normalMap: textureLoader.load('../texture/planets/sun_normalmap.png'),
         normalScale: new THREE.Vector2(0.85, 0.85)
     });
     sun = new THREE.Mesh(sunGeometry, sunMaterial);
@@ -139,7 +141,7 @@ function init() {
     });
     moon = new THREE.Mesh(moonGeometry, moonMaterial);
     scene.add(moon);
-    
+
     // mars
     var marsGeometry = new THREE.SphereBufferGeometry(normalizeRadius(TRUE_MARS_RADIUS), 16, 16);
     var marsMaterial = new THREE.MeshPhongMaterial({
@@ -150,6 +152,7 @@ function init() {
     });
     mars = new THREE.Mesh(marsGeometry, marsMaterial);
     scene.add(mars);
+
     // jupiter
     var jupiterGeometry = new THREE.SphereBufferGeometry(normalizeRadius(TRUE_JUPITER_RADIUS), 16, 16);
     var jupiterMaterial = new THREE.MeshPhongMaterial({
@@ -160,6 +163,7 @@ function init() {
     });
     jupiter = new THREE.Mesh(jupiterGeometry, jupiterMaterial);
     scene.add(jupiter);
+
     // saturn
     var saturnGeometry = new THREE.SphereBufferGeometry(normalizeRadius(TRUE_SATURN_RADIUS), 16, 16);
     var saturnMaterial = new THREE.MeshPhongMaterial({
@@ -170,6 +174,50 @@ function init() {
     });
     saturn = new THREE.Mesh(saturnGeometry, saturnMaterial);
     scene.add(saturn);
+    // saturn rings
+    var saturnringGeometry = new THREE.RingBufferGeometry(normalizeRadius(TRUE_SATURN_RADIUS) * 1.1, normalizeRadius(TRUE_SATURN_RADIUS) * 1.5,
+        100, 10, 0, 10);
+    var saturnRingMaterial = new THREE.MeshPhongMaterial({
+        specular: 0x333333,
+        shininess: 5,
+        map: textureLoader.load('../texture/planets/saturnring.png'),
+        normalScale: new THREE.Vector2(0.85, 0.85)
+    });
+    saturnring = new THREE.Mesh(saturnringGeometry, saturnRingMaterial);
+    scene.add(saturnring);
+
+    // stars
+    var uniforms = {
+        pointTexture: { value: new THREE.TextureLoader().load("../texture/sprites/spark1.png") }
+    };
+    var shaderMaterial = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: document.getElementById('vertexshader').textContent,
+        fragmentShader: document.getElementById('fragmentshader').textContent,
+        blending: THREE.AdditiveBlending,
+        depthTest: false,
+        transparent: true,
+        vertexColors: true
+    });
+    stargeometry = new THREE.BufferGeometry();
+    var radius = 200;
+    var positions = [];
+    var colors = [];
+    var sizes = [];
+    var color = new THREE.Color();
+    for (var i = 0; i < particles; i++) {
+        positions.push((Math.random() * 2 - 1) * radius);
+        positions.push((Math.random() * 2 - 1) * radius);
+        positions.push((Math.random() * 2 - 1) * radius);
+        color.setHSL(i / particles, 1.0, 0.5);
+        colors.push(color.r, color.g, color.b);
+        sizes.push(20);
+    }
+    stargeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    stargeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    stargeometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1).setUsage(THREE.DynamicDrawUsage));
+    particleSystem = new THREE.Points(stargeometry, shaderMaterial);
+    scene.add(particleSystem);
 
     // label and div
 
@@ -259,6 +307,10 @@ function animate() {
 
     var elapsed = clock.getElapsedTime() / 10;
 
+    // sun
+    sun.rotation.y = 3 * elapsed;
+    sun.rotation.x = 2 * elapsed;
+    sun.rotation.z = elapsed;
     // mercury
     mercury.position.set(Math.sin(50 * elapsed / MERCURY_REVOLUTION) * normalizeDistance(MERCURY_PERIHELION),
         0, Math.cos(50 * elapsed / MERCURY_REVOLUTION) * normalizeDistance(MERCURY_PERIHELION));
@@ -272,7 +324,7 @@ function animate() {
     earth.rotation.x = .3;
     earth.rotation.y = 50 * elapsed;
     // moon
-    moon.position.set(Math.sin(50 * elapsed / MOON_REVOLUTION) * .3 + Math.sin(50 * elapsed / EARTH_REVOLUTION) * normalizeDistance(EARTH_PERIHELION), 
+    moon.position.set(Math.sin(50 * elapsed / MOON_REVOLUTION) * .3 + Math.sin(50 * elapsed / EARTH_REVOLUTION) * normalizeDistance(EARTH_PERIHELION),
         0, Math.cos(50 * elapsed / MOON_REVOLUTION) * .3 + Math.cos(50 * elapsed / EARTH_REVOLUTION) * normalizeDistance(EARTH_PERIHELION));
     moon.rotation.y = elapsed;
     // mars
@@ -287,7 +339,17 @@ function animate() {
     saturn.position.set(Math.sin(50 * elapsed / SATURN_REVOLUTION) * normalizeDistance(SATURN_PERIHELION),
         0, Math.cos(50 * elapsed / SATURN_REVOLUTION) * normalizeDistance(SATURN_PERIHELION));
     saturn.rotation.y = 50 * elapsed / SATURN_ROTATION;
-    
+    saturnring.position.set(Math.sin(50 * elapsed / SATURN_REVOLUTION) * normalizeDistance(SATURN_PERIHELION),
+        0, Math.cos(50 * elapsed / SATURN_REVOLUTION) * normalizeDistance(SATURN_PERIHELION));
+    // stars
+    var time = Date.now() * 0.005;
+    particleSystem.rotation.z = 0.001 * time;
+    var sizes = stargeometry.attributes.size.array;
+    for (var i = 0; i < particles; i++) {
+        sizes[i] = 2 * (1 + Math.sin(0.01 * i + time));
+    }
+    stargeometry.attributes.size.needsUpdate = true;
+
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
 }

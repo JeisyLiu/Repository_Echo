@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<title>three.js css2d - label</title>
+		<title>404 NOT FOUND</title>
 		<link type="text/css" rel="stylesheet" href="../css/main.css">
 		<style>
 			.label {
@@ -15,11 +15,33 @@
 		</style>
 	</head>
 	<body>
-		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> css2d - label</div>
+		<div id="info"><a href="http://huangyuxuan.top/" target="_blank" rel="noopener">404 </a>NOT FOUND</div>
 
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+			attribute float size;
+			varying vec3 vColor;
+
+			void main() {
+				vColor = color;
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+				gl_Position = projectionMatrix * mvPosition;
+			}
+
+		</script>
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			uniform sampler2D pointTexture;
+			varying vec3 vColor;
+
+			void main() {
+				gl_FragColor = vec4( vColor, 1.0 );
+				gl_FragColor = gl_FragColor * texture2D( pointTexture, gl_PointCoord );
+			}
+
+		</script>
+		<script type="module" src="../script/stars.js"></script>
 		<script type="module" src="../script/drawer.js"></script>
-		<script type="x-shader/x-vertex" id="vertexshader" src="../script/vertexshader.js"></script>
-		<script type="x-shader/x-fragment" id="fragshader" src="../script/fragshader.js"></script>
-		<script type="module" src="../script/particles.js"></script>
 	</body>
 </html>
